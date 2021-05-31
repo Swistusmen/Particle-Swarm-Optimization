@@ -7,6 +7,7 @@
 #include <vector>
 #include <numeric>
 #include <limits>
+#include <algorithm>
 
 #define EPSILON 0.0001
 #define EPSILON_EXP 1000
@@ -22,6 +23,7 @@ public:
 private:
 	inline void RandomizeR();
 	std::pair<double, double> GenerateStartingPositions(std::array< double,2> x, std::array< double,2> y);
+	std::pair<double, double> FindBestDirection(double velocity);
 private:
 	double velocity;
 	double rl, rg;
