@@ -9,7 +9,7 @@
 #include <limits>
 #include <algorithm>
 
-#define EPSILON 0.0001
+#define EPSILON 0.001
 #define EPSILON_EXP 1000
 #define VELOCITY_SCOPE 100
 
