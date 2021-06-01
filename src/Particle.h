@@ -8,17 +8,20 @@
 #include <numeric>
 #include <limits>
 #include <algorithm>
+#include <random>
 
 #define EPSILON 0.001
 #define EPSILON_EXP 1000
 #define VELOCITY_SCOPE 100
+#define SIGMA 0.5
 
 class Particle {
 public:
-	Particle(int numberOfIterations, std::function< double( double,  double)> fun, std::array< double, 2> maxX, std::array< double,2> maxY);
+	explicit Particle(int numberOfIterations, std::function< double( double,  double)> fun, std::array< double, 2> maxX, std::array< double,2> maxY);
 
 	void CalculateNextPosition();
 	std::pair< double,  double> GetBestPosition() {return bestPosition;};
+	void SetBestGlobalPosition(std::pair<double, double> solution);
 
 private:
 	inline void RandomizeR();
@@ -41,4 +44,7 @@ private:
 
 	std::array< double, 2> X;
 	std::array< double, 2> Y;
+
+	std::random_device rd;
+	std::mt19937 gen{ rd() };
 };

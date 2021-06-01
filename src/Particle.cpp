@@ -10,9 +10,14 @@ Particle::Particle(int numberOfIterations, std::function< double( double,  doubl
 	currentPosition = GenerateStartingPositions(maxX, maxY);
 	bestLocalPosition = currentPosition;
 	bestPosition = currentPosition;
-	srand(std::time(nullptr));
-	velocity = (rand() % VELOCITY_SCOPE) / std::pow(10, rand() % VELOCITY_SCOPE + 1);
+	std::normal_distribution<> dist(1000, 500);
+	int scope = -1;
+	while (scope < 0 && scope>1000)
+		scope = dist(rd);
+	
+	velocity = scope / 1000;
 	RandomizeR();
+	std::cout << currentPosition.first << " " << currentPosition.second << " " << velocity << " " << rl << " " << rg << std::endl;
 }
 
 void Particle::CalculateNextPosition()
@@ -28,6 +33,7 @@ void Particle::CalculateNextPosition()
 	double newPositionGoalFunctionValue = goalFunction(currentPosition.first, currentPosition.second);
 	if (newPositionGoalFunctionValue < oldPositionGoalFunctionValue)
 		bestLocalPosition = currentPosition;
+	n++;
 }
 
 std::pair<double, double> Particle::FindBestDirection(double velocity)
@@ -65,35 +71,64 @@ std::pair<double, double> Particle::FindBestDirection(double velocity)
 
 std::pair<double, double> Particle::GenerateStartingPositions(std::array< double, 2> x, std::array< double, 2> y)
 {
-	 double scopeX = std::abs(x[0]) - std::abs(x[1]);
-	 double scopeY = std::abs(y[0]) - std::abs(y[1]);
+	double scopeX = std::abs(x[0] - x[1]);
+	double scopeY = std::abs(y[0]-y[1]);
 
 	int X = scopeX * EPSILON_EXP;
 	int Y = scopeY * EPSILON_EXP;
 
-	std::pair< double,  double> result;
-	srand(std::time(nullptr));
-	result.first = (rand() % X);
-	result.second = (rand() % Y);
-	if (rand() % 1 == 0)
+	std::pair< double, double> result;
+
+	//std::normal_distribution<> distX(X / 2, SIGMA);
+	//std::normal_distribution<> distY(Y / 2, SIGMA);
+	std::poisson_distribution<> dist(5000);
+	std::normal_distribution<> distY(15000 , 10000);
+	srand(std::time(NULL));
+	while (true)
 	{
-		result.first = std::abs(x[0]) * EPSILON_EXP - result.first;
-		result.second = std::abs(y[0]) * EPSILON_EXP - result.second;
+		result.first = std::abs(distY(rd));
+		result.first /= EPSILON_EXP;
+		result.first += x[1];
+		if (result.first <= x[0] && result.first > x[1])
+			break;
 	}
-	result.first *= EPSILON;
-	result.first += x[1];
-	result.second *= EPSILON;
-	result.second += y[1];
+	
+	while (true)
+	{
+		//result.second = std::abs(distY(rd));
+		result.second = std::abs(distY(rd));
+		result.second /= EPSILON_EXP;
+		result.second += y[1];
+		if (result.second <= y[0] && result.second > y[1])
+			break;
+	}
+
 	return result;
 }
 
 void Particle::RandomizeR()
 {
-	srand(std::time(nullptr));
-	int max = rand() % 33;
-	for(int i=0;i<max;i++)
-		rl = static_cast<double>((rand() % 1001) / 1000.0);
-	max = rand() % 17;
-	for (int i = 0; i < max; i++)
-		rg = static_cast<double>((rand() % 1001) / 1000.0);
+	std::normal_distribution<> dist(500 , 250 );
+	while (true)
+	{
+		rl = std::abs(dist(rd));
+		if (rl < 1000 && rl>0)
+			break;
+	}
+	while (true)
+	{
+		rg = std::abs(dist(rd));
+		if (rg < 1000 && rg>0)
+			break;
+	}
+	rl /= 1000;
+	rg /= 1000;
+}
+
+void Particle::SetBestGlobalPosition(std::pair<double, double> solution)
+{
+	double newSolution = goalFunction(solution.first, solution.second);
+	double oldSolution = goalFunction(bestPosition.first, bestPosition.second);
+	if (oldSolution > newSolution)
+		bestPosition = solution;
 }
