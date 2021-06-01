@@ -14,16 +14,11 @@ int main(){
     SwarmInputData input;
     input.X = x;
     input.Y = y;
-    input.noParticles = 2;
-    input.iterations = 10;
+    input.noParticles = 100;
+    input.iterations = 100;
     input.goalFunction = Himmelblau;
 
     auto output = SwarmOneThread(input);
     std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
-	//add input
-    //add setting up and checking best global solution
-    //implement working flow
-    //check on real function
-    //add multithreading
     return 0;
 }

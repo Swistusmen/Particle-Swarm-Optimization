@@ -17,7 +17,7 @@ Particle::Particle(int numberOfIterations, std::function< double( double,  doubl
 	
 	velocity = scope / 1000;
 	RandomizeR();
-	std::cout << currentPosition.first << " " << currentPosition.second << " " << velocity << " " << rl << " " << rg << std::endl;
+	//std::cout << currentPosition.first << " " << currentPosition.second << " " << velocity << " " << rl << " " << rg << std::endl;
 }
 
 void Particle::CalculateNextPosition()
@@ -79,14 +79,11 @@ std::pair<double, double> Particle::GenerateStartingPositions(std::array< double
 
 	std::pair< double, double> result;
 
-	//std::normal_distribution<> distX(X / 2, SIGMA);
-	//std::normal_distribution<> distY(Y / 2, SIGMA);
-	std::poisson_distribution<> dist(5000);
-	std::normal_distribution<> distY(15000 , 10000);
+	std::normal_distribution<> dist(15000 , 10000);
 	srand(std::time(NULL));
 	while (true)
 	{
-		result.first = std::abs(distY(rd));
+		result.first = std::abs(dist(rd));
 		result.first /= EPSILON_EXP;
 		result.first += x[1];
 		if (result.first <= x[0] && result.first > x[1])
@@ -96,7 +93,7 @@ std::pair<double, double> Particle::GenerateStartingPositions(std::array< double
 	while (true)
 	{
 		//result.second = std::abs(distY(rd));
-		result.second = std::abs(distY(rd));
+		result.second = std::abs(dist(rd));
 		result.second /= EPSILON_EXP;
 		result.second += y[1];
 		if (result.second <= y[0] && result.second > y[1])
