@@ -1,6 +1,27 @@
 #include "Particle.h"
 #include <iostream>
 
+Particle::Particle(int numberOfIterations, std::function<double(double, double)>fun, std::array<double, 2> maxX, std::array<double, 2> maxY, double* locations)
+{
+	goalFunction = fun;
+	T = numberOfIterations;
+	X = maxX;
+	Y = maxY;
+	this->locations = locations; //assure that i get table with 4 doubles, first- best global,
+	currentPosition = GenerateStartingPositions(maxX, maxY);
+	bestLocalPosition = currentPosition;
+	locations[0] = currentPosition.first;
+	locations[1] = currentPosition.second;
+	bestPosition = currentPosition;
+	std::normal_distribution<> dist(1000, 500);
+	int scope = -1;
+	while (scope < 0 && scope>1000)
+		scope = dist(rd);
+
+	velocity = scope / 1000;
+	RandomizeR();
+}
+
 Particle::Particle(int numberOfIterations, std::function< double( double,  double)> fun, std::array< double,2> maxX, std::array< double,2> maxY)
 {
 	goalFunction = fun;
@@ -20,8 +41,30 @@ Particle::Particle(int numberOfIterations, std::function< double( double,  doubl
 	//std::cout << currentPosition.first << " " << currentPosition.second << " " << velocity << " " << rl << " " << rg << std::endl;
 }
 
+void Particle::CalculateNextPositionThread()
+{
+	currentPosition = bestLocalPosition;
+	c1 = (cmin - cmax) * n / T + cmax;
+	c2 = (cmax - cmin) * n / T + cmin;
+	w = wmax - ((wmax - wmin) / T) * n;
+	double localDistance = std::sqrt(std::pow(locations[0] - currentPosition.first, 2) + std::pow(locations[1] - currentPosition.second, 2));
+	double globalDistance = std::sqrt(std::pow(locations[2] - currentPosition.first, 2) + std::pow(locations[3] - currentPosition.second, 2));
+	velocity = velocity * w + rl * c1 * localDistance + rg * c2 * globalDistance;
+	currentPosition = FindBestDirection(velocity);
+	double oldPositionGoalFunctionValue = goalFunction(bestLocalPosition.first, bestLocalPosition.second);
+	double newPositionGoalFunctionValue = goalFunction(currentPosition.first, currentPosition.second);
+	if (newPositionGoalFunctionValue < oldPositionGoalFunctionValue)
+	{
+		bestLocalPosition = currentPosition;
+		locations[0] = currentPosition.first;
+		locations[1] = currentPosition.second;
+	}
+	n++;
+}
+
 void Particle::CalculateNextPosition()
 {
+	currentPosition = bestLocalPosition;
 	c1 = (cmin - cmax) * n / T + cmax;
 	c2 = (cmax - cmin) * n / T + cmin;
 	w = wmax - ((wmax - wmin) / T) * n;
@@ -41,10 +84,18 @@ std::pair<double, double> Particle::FindBestDirection(double velocity)
 	std::vector<double> solutions(4);
 	std::vector<std::pair<double, double>> directions(4);
 	std::fill(solutions.begin(), solutions.end(), std::numeric_limits<double>::max());
+	
 	double newPositiveX = currentPosition.first + velocity;
 	double newNegativeX = currentPosition.first - velocity;
 	double newPositiveY = currentPosition.second + velocity;
 	double newNegativeY = currentPosition.second - velocity;
+	
+	/*
+	double newPositiveX = bestLocalPosition.first + velocity;
+	double newNegativeX = bestLocalPosition.first - velocity;
+	double newPositiveY = bestLocalPosition.second + velocity;
+	double newNegativeY = bestLocalPosition.second - velocity;
+	*/
 	if (newPositiveX < X[0] && newPositiveX > X[1] && newPositiveY < Y[0] && newPositiveY > Y[1])
 	{
 		solutions[0] = goalFunction(newPositiveX, newPositiveY);

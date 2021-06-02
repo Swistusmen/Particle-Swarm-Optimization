@@ -15,11 +15,15 @@
 #define VELOCITY_SCOPE 100
 #define SIGMA 0.5
 
+//after all change it to class hierarchy- one class for common implementation, one for thread, one for 1 thread, and one for implementation
+
 class Particle {
 public:
 	explicit Particle(int numberOfIterations, std::function< double( double,  double)> fun, std::array< double, 2> maxX, std::array< double,2> maxY);
+	explicit Particle(int numberOfIterations, std::function<double(double, double)>fun, std::array<double, 2> maxX, std::array<double, 2> maxY, double* locations);
 
 	void CalculateNextPosition();
+	void CalculateNextPositionThread(); //function operates on raw memory
 	std::pair< double,  double> GetBestPosition() {return bestPosition;};
 	void SetBestGlobalPosition(std::pair<double, double> solution);
 
@@ -44,6 +48,7 @@ private:
 
 	std::array< double, 2> X;
 	std::array< double, 2> Y;
+	double* locations;
 
 	std::random_device rd;
 	std::mt19937 gen{ rd() };

@@ -1,6 +1,7 @@
 #include "Particle.h"
 #include <memory>
 #include <utility>
+#include <thread>
 
 struct SwarmInputData {
 	std::function<double(double, double)> goalFunction;
@@ -16,3 +17,5 @@ struct SwarmOutputata {
 };
 
 SwarmOutputata SwarmOneThread(SwarmInputData data);
+
+SwarmOutputata SwarmMultiThread(SwarmInputData data);

@@ -15,10 +15,11 @@ int main(){
     input.X = x;
     input.Y = y;
     input.noParticles = 100;
-    input.iterations = 100;
+    input.iterations = 1000;
     input.goalFunction = Himmelblau;
 
-    auto output = SwarmOneThread(input);
+    //auto output = SwarmOneThread(input);
+    auto output = SwarmMultiThread(input);
     std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
     return 0;
 }
