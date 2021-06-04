@@ -64,7 +64,7 @@ void Particle::CalculateNextPositionThread()
 
 void Particle::CalculateNextPosition()
 {
-	currentPosition = bestLocalPosition;
+	//currentPosition = bestLocalPosition;
 	c1 = (cmin - cmax) * n / T + cmax;
 	c2 = (cmax - cmin) * n / T + cmin;
 	w = wmax - ((wmax - wmin) / T) * n;
