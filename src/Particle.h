@@ -9,12 +9,7 @@
 #include <limits>
 #include <algorithm>
 #include <random>
-
-#define EPSILON 0.001
-#define EPSILON_EXP 1000
-#define VELOCITY_SCOPE 100
-#define SIGMA 0.5
-
+#include "Utilities.h"
 //after all change it to class hierarchy- one class for common implementation, one for thread, one for 1 thread, and one for implementation
 
 class Particle {

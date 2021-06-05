@@ -1,4 +1,5 @@
 #include "POSFunctions.h"
+#include <iostream>
 
 Positions::Positions(std::array<double, 2> x, std::array<double, 2> y, std::function<double(double, double)> fun, std::array<double,2> start)
 {
@@ -9,12 +10,15 @@ Positions::Positions(std::array<double, 2> x, std::array<double, 2> y, std::func
 	bestLocalPosition = start;
 	currentPosition = start;
 }
-
+//currently just test for one thread
+//if correct- mor threads
 SwarmOutputata FindMinimum(SwarmInputData input)
 {
+	//calculate separation of particles to sections to thread
 	Positions* positions= new Positions[input.noParticles];
 	std::vector<std::array<double, 2>> minimums(input.noParticles);
 	std::vector<double> real_solutions(input.noParticles);
+	Parameters* params = new Parameters[input.noParticles];
 	
 	for (int i = 0; i < input.noParticles; i++)
 	{
@@ -27,60 +31,40 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 		real_solutions[i] = input.goalFunction(minimums[i][0], minimums[i][1]);
 	}
 	auto bestSolution = minimums[std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin()];
-
+	std::cout << bestSolution[0] << " " << bestSolution[1] << std::endl;
 	for (int i = 0; i< input.noParticles; i++)
 	{
-		positions[i].globalPosition=bestSolutins
+		positions[i].globalPosition = bestSolution;
 	}
 
-}
-
-SwarmOutputata SwarmOneThread(SwarmInputData input)
-{
-	std::vector<std::unique_ptr<Particle>> particles;
-	std::vector<std::pair<double, double>> solutions;
-	std::vector<double> real_solutions;
-	const int noParticles = input.noParticles;
-	const int n = input.iterations;
-	for (int i = 0; i < noParticles; i++)
+	for (int i = 0; i < input.iterations; i++)
 	{
-		particles.push_back(std::make_unique<Particle>(input.iterations, input.goalFunction, input.X, input.Y));
-		solutions.push_back(particles.back()->GetBestPosition());
-		real_solutions.push_back(input.goalFunction(solutions.back().first, solutions.back().second));
-	}
-
-	auto bestSolution = solutions[std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin()];
-
-	for (int j = 0; j < noParticles; j++)
-	{
-		particles[j]->SetBestGlobalPosition(bestSolution);
-	}
-
-
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < noParticles; j++)
+		for (int j = 0; j < input.noParticles; j++)
 		{
-			particles[j]->CalculateNextPosition();
-			solutions[j] = particles[j]->GetBestPosition();
-			real_solutions[j] = input.goalFunction(solutions[j].first, solutions[j].second);
+			params[j] = CalculateParameters(j, input.iterations);
+			CalculateBestLocalPosition(&positions[j], params[j]);
 		}
-		auto tempBestSolution = solutions[std::min_element(solutions.begin(), solutions.end()) - solutions.begin()];
-		if (input.goalFunction(tempBestSolution.first, tempBestSolution.second) < input.goalFunction(bestSolution.first, bestSolution.second))
+		for (int j = 0; j < input.noParticles; j++)
+		{
+			minimums[j] = positions[j].bestLocalPosition;
+			real_solutions[j] = input.goalFunction(minimums[j][0], minimums[j][1]);
+		}
+		auto bestSolution = minimums[std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin()];
+
+		auto tempBestSolution = minimums[std::min_element(minimums.begin(), minimums.end()) - minimums.begin()];
+		if (input.goalFunction(tempBestSolution[0], tempBestSolution[1]) < input.goalFunction(bestSolution[0], bestSolution[1]))
 		{
 			bestSolution = tempBestSolution;
-			for (int j = 0; j < noParticles; j++)
+			for (int j = 0; j < input.noParticles; j++)
 			{
-				particles[j]->SetBestGlobalPosition(bestSolution);
+				positions[j].globalPosition=bestSolution;
 			}
 		}
 	}
 	SwarmOutputata output;
-
-	output.x = bestSolution.first;
-	output.y = bestSolution.second;
+	output.x = bestSolution[0];
+	output.y = bestSolution[1];
 	output.z = input.goalFunction(output.x, output.y);
-
 	return output;
 }
 
@@ -98,7 +82,8 @@ int RandomInThousand()
 double GenerateStartingPosition(std::array<double, 2> min_max)
 {
 	double scope = std::abs(min_max[0] - min_max[1]);
-	int number = -1;
+	scope *= EPSILON_EXP;
+	double number = -1.0;
 	std::random_device rd;
 	std::mt19937 gen{ rd() };
 	std::normal_distribution<> dist(15000, 10000);
@@ -106,7 +91,7 @@ double GenerateStartingPosition(std::array<double, 2> min_max)
 	{
 		number = dist(rd);
 	}
-	return number + min_max[1];
+	return number/EPSILON_EXP+min_max[1];
 }
 
 Parameters CalculateParameters(int iteration, int noIterations)

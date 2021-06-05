@@ -1,5 +1,4 @@
 #include "Particle.h"
-#include <iostream>
 
 Particle::Particle(int numberOfIterations, std::function<double(double, double)>fun, std::array<double, 2> maxX, std::array<double, 2> maxY, double* locations)
 {

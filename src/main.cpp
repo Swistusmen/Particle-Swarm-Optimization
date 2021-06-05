@@ -1,4 +1,5 @@
 #include "OptimizationFunctions.h"
+#include "POSFunctions.h"
 #include <iostream>
 
 double a(double x, double y) { return x * y; }
@@ -20,6 +21,9 @@ int main(){
 
     //auto output = SwarmOneThread(input);
     auto output = SwarmMultiThread(input);
+    std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
+
+    output = FindMinimum(input);
     std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
     return 0;
 }
