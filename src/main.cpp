@@ -15,10 +15,10 @@ int main(){
     SwarmInputData input;
     input.X = x;
     input.Y = y;
-    input.noParticles = 1000;
-    input.iterations = 10000;
+    input.noParticles = 100;
+    input.iterations = 1000;
     input.goalFunction = Himmelblau;
-    input.threads = 2;
+    input.threads = 4;
 
     auto output = SwarmOneThread(input);
     

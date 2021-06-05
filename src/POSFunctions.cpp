@@ -37,6 +37,15 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 		positions[i].globalPosition = bestSolution;
 	}
 
+	for (int j = 0; j < threadRanges.size(); j++)
+	{
+		particles[j] = std::thread(CalculateNextMove, threadRanges[j], positions, params, input.iterations,bestSolution, real_solutions ,minimums,input.goalFunction);
+	}
+	for (int j = 0; j < threadRanges.size(); j++)
+	{
+		particles[j].join();
+	}
+	/*
 	for (int i = 0; i < input.iterations; i++)
 	{
 		for (int j = 0; j < threadRanges.size(); j++)
@@ -53,8 +62,7 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 			minimums[j] = positions[j].bestLocalPosition;
 			real_solutions[j] = input.goalFunction(minimums[j][0], minimums[j][1]);
 		}
-		auto bestSolution = minimums[std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin()];
-
+		
 		auto tempBestSolution = minimums[std::min_element(minimums.begin(), minimums.end()) - minimums.begin()];
 		if (input.goalFunction(tempBestSolution[0], tempBestSolution[1]) < input.goalFunction(bestSolution[0], bestSolution[1]))
 		{
@@ -64,7 +72,8 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 				positions[j].globalPosition=bestSolution;
 			}
 		}
-	}
+	
+	}*/
 	SwarmOutputata output;
 	output.x = bestSolution[0];
 	output.y = bestSolution[1];
@@ -192,7 +201,7 @@ std::vector<std::array<int, 2>> CalculateThreadBounds(SwarmInputData* input)
 	}
 	return output;
 }
-
+/*
 void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameters* params, int iteration, int noIterations)
 {
 	for (int i = range[0]; i < range[1]; i++)
@@ -201,3 +210,39 @@ void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameter
 		CalculateBestLocalPosition(&positions[i], params[i]);
 	}
 }
+*/
+void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameters* params,
+	int noIterations, std::array<double, 2>& bestSolution, std::vector<double>& real_solutions,
+	std::vector<std::array<double, 2>>& minimums, std::function<double(double,double)> fun)
+{
+	int c = 0;
+	//std::barrier sync_point(4, [&]() {std::cout << c << std::endl; });
+	for (int i = 0; i < noIterations; i++) 
+	{
+		c = i;
+		for (int j = range[0]; j < range[1]; j++)
+		{
+			params[j] = CalculateParameters(j, noIterations);
+			CalculateBestLocalPosition(&positions[j], params[j]);
+		}
+
+		for (int j = range[0]; j < range[1]; j++)
+		{
+			minimums[j] = positions[j].bestLocalPosition;
+			real_solutions[j] = fun(minimums[j][0], minimums[j][1]);
+		}
+		//sturktura booli gdzie czekam az kazdy watek oznaczy robote jako wykonana
+		//sync_point.arrive_and_wait();
+		/*auto tempBestSolution = minimums[std::min_element(minimums.begin(), minimums.end()) - minimums.begin()];
+		if (fun(tempBestSolution[0], tempBestSolution[1]) < fun(bestSolution[0], bestSolution[1]))
+		{
+			bestSolution = tempBestSolution;
+		}
+
+		for (int j = range[0]; j < range[1]; j++)
+		{
+			positions[j].globalPosition = bestSolution;
+		}*/
+	}
+}
+
