@@ -1,6 +1,7 @@
 #pragma once
 #include "Utilities.h"
 #include <random>
+#include <thread>
 
 struct Parameters {
 	double c1=0.0, c2=0.0, w=0.0;
@@ -27,5 +28,10 @@ void CalculateBestLocalPosition(Positions* positions, Parameters parameters);
 
 std::array<double, 2> FindBestDirection(Positions* positions);
 
+std::vector<std::array<int, 2>> CalculateThreadBounds(SwarmInputData* input);
+
 SwarmOutputata FindMinimum(SwarmInputData input);
+
+void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameters* params, int iteration,int noIterations);
+
 

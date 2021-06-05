@@ -15,12 +15,13 @@ int main(){
     SwarmInputData input;
     input.X = x;
     input.Y = y;
-    input.noParticles = 100;
-    input.iterations = 1000;
+    input.noParticles = 1000;
+    input.iterations = 10000;
     input.goalFunction = Himmelblau;
+    input.threads = 2;
 
-    //auto output = SwarmOneThread(input);
-    auto output = SwarmMultiThread(input);
+    auto output = SwarmOneThread(input);
+    
     std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
 
     output = FindMinimum(input);

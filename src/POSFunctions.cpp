@@ -10,16 +10,16 @@ Positions::Positions(std::array<double, 2> x, std::array<double, 2> y, std::func
 	bestLocalPosition = start;
 	currentPosition = start;
 }
-//currently just test for one thread
-//if correct- mor threads
+
 SwarmOutputata FindMinimum(SwarmInputData input)
 {
-	//calculate separation of particles to sections to thread
+	auto threadRanges = CalculateThreadBounds(&input);
 	Positions* positions= new Positions[input.noParticles];
 	std::vector<std::array<double, 2>> minimums(input.noParticles);
 	std::vector<double> real_solutions(input.noParticles);
 	Parameters* params = new Parameters[input.noParticles];
-	
+	std::vector<std::thread> particles(input.noParticles);
+	//here
 	for (int i = 0; i < input.noParticles; i++)
 	{
 		positions[i]= Positions{ input.X,input.Y,input.goalFunction,{GenerateStartingPosition(input.X),GenerateStartingPosition(input.Y)} };
@@ -31,7 +31,7 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 		real_solutions[i] = input.goalFunction(minimums[i][0], minimums[i][1]);
 	}
 	auto bestSolution = minimums[std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin()];
-	std::cout << bestSolution[0] << " " << bestSolution[1] << std::endl;
+	
 	for (int i = 0; i< input.noParticles; i++)
 	{
 		positions[i].globalPosition = bestSolution;
@@ -39,11 +39,15 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 
 	for (int i = 0; i < input.iterations; i++)
 	{
-		for (int j = 0; j < input.noParticles; j++)
+		for (int j = 0; j < threadRanges.size(); j++)
 		{
-			params[j] = CalculateParameters(j, input.iterations);
-			CalculateBestLocalPosition(&positions[j], params[j]);
+			particles[j] = std::thread(CalculateNextMove, threadRanges[j], positions, params,j, input.iterations);
 		}
+		for (int j = 0; j < threadRanges.size(); j++)
+		{
+			particles[j].join();
+		}
+		
 		for (int j = 0; j < input.noParticles; j++)
 		{
 			minimums[j] = positions[j].bestLocalPosition;
@@ -156,4 +160,44 @@ void CalculateBestLocalPosition(Positions* positions,Parameters parameters)
 	double newPositionGoalFunctionValue = positions->goalFunction(currentPosition[0], currentPosition[1]);
 	if (newPositionGoalFunctionValue < oldPositionGoalFunctionValue)
 		positions->bestLocalPosition = currentPosition;
+}
+
+std::vector<std::array<int, 2>> CalculateThreadBounds(SwarmInputData* input)
+{
+	int noThreads = input->threads;
+	int noParticles = input->noParticles;
+	if (noThreads == 1)
+	{
+		return std::vector<std::array<int, 2>> { { 0, noParticles }};
+	}
+	int noPartitions = -1;
+	if (noThreads == 0) //divice number of threads
+	{
+		noThreads = std::thread::hardware_concurrency();
+	}
+	if (noThreads % 2 == 1)
+	{
+		noThreads = std::thread::hardware_concurrency();
+	}
+	if (noParticles % 1 == 1)
+	{
+		input->noParticles += 1;
+	}
+	std::vector<std::array<int, 2>> output;
+	int range = noParticles / noThreads;
+	output.push_back({ 0,range });
+	for (int i = 1; i < noThreads; i++)
+	{
+		output.push_back({ i * range,i * range + range });
+	}
+	return output;
+}
+
+void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameters* params, int iteration, int noIterations)
+{
+	for (int i = range[0]; i < range[1]; i++)
+	{
+		params[i] = CalculateParameters(iteration, noIterations);
+		CalculateBestLocalPosition(&positions[i], params[i]);
+	}
 }
