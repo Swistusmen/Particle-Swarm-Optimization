@@ -8,13 +8,15 @@
 #include <mutex>
 #include <iostream>
 
-std::thread::id sorterID;
-std::thread::id mainThread;
-bool readyToCalc = false;
-
 struct Parameters {
 	double c1=0.0, c2=0.0, w=0.0;
 	Parameters() = default;
+};
+
+struct ThreadCommon {
+	std::thread::id sorterID;
+	std::thread::id mainThread;
+	bool readyToCalc = false;
 };
 
 struct Positions {
@@ -38,12 +40,13 @@ struct NextMove {
 	std::vector<double>* real_solutions;
 	std::array<int, 2> range;
 	std::mutex* mymut;
-	bool* isJobDone;
+	int* isJobDone;
 	int number;
-	
+	ThreadCommon* tCommon;
+
 	NextMove(Parameters* params, Positions* pos, SwarmInputData inp, std::array<double, 2>* sol,
 		std::vector<std::array<double, 2>>* mins, std::vector<double>* rsol, std::array<int, 2> r,
-		std::mutex* m,bool* tabOfJobs,int number);
+		std::mutex* m,int* tabOfJobs,int number,ThreadCommon* tcom);
 };
 
 int RandomInThousand(); //for r and starting velocity

@@ -19,8 +19,10 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 	Parameters* params = new Parameters[input.noParticles];
 	std::vector<std::thread> particles(input.noParticles);
 	std::mutex* mutexes = new std::mutex;
-	bool* jobDone = new bool[input.noParticles]{ false };
-	mainThread = std::this_thread::get_id();
+	int* jobDone = new int[input.noParticles]{ -1 };
+	ThreadCommon tCommon;
+	tCommon.mainThread = std::this_thread::get_id();
+	tCommon.sorterID = std::this_thread::get_id();
 	for (int i = 0; i < input.noParticles; i++)
 	{
 		positions[i]= Positions{ input.X,input.Y,input.goalFunction,{GenerateStartingPosition(input.X),GenerateStartingPosition(input.Y)} };
@@ -41,7 +43,7 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 	for (int j = 0; j < threadRanges.size(); j++)
 	{
 		NextMove next(params, positions, input, &bestSolution, &minimums, &real_solutions
-			, threadRanges[j], mutexes,jobDone,j);
+			, threadRanges[j], mutexes,jobDone,j,&tCommon);
 		particles[j] = std::thread(CalculateNextMove, next );
 	}
 	for (int j = 0; j < threadRanges.size(); j++)
@@ -216,6 +218,7 @@ void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameter
 */
 void CalculateNextMove(NextMove next)
 {
+	std::cout << std::this_thread::get_id() << std::endl;
 	int noIterations = next.input.iterations;
 	for (int i = 0; i < noIterations; i++)
 	{
@@ -232,52 +235,56 @@ void CalculateNextMove(NextMove next)
 			double y = (next.minimums->operator[](j))[0];
 			next.real_solutions->at(j) = next.input.goalFunction(x, y);
 		}
-		next.isJobDone[next.number] = true;
+		next.isJobDone[next.number] = -1;
 		next.mymut->lock();
-		if (sorterID == mainThread) {
-			sorterID = std::this_thread::get_id();
+		if (next.tCommon->sorterID == next.tCommon->mainThread) {
+			next.tCommon->sorterID = std::this_thread::get_id();
 		}
-		next.isJobDone[next.number] = true;
+		next.isJobDone[next.number] = i;
 		next.mymut->unlock();
 		std::array<double, 2> tempBestSolution;
 		while (true)
 		{
 			next.mymut->lock();
-			if (std::this_thread::get_id() == sorterID)
+			std::cout << std::this_thread::get_id()<<" "<<i << std::endl;
+			if (std::this_thread::get_id() == next.tCommon->sorterID)
 			{
 				bool doAllThreadsEned = true;
 				for (int j = 0; j < next.input.threads; j++)
 				{
-					if (next.isJobDone[j] == false)
+					std::cout << next.isJobDone[j] << " ";
+					if (next.isJobDone[j] != i)
 						doAllThreadsEned = false;
 				}
+				std::cout << std::endl;
 				if (doAllThreadsEned == true) {
+					std::cout << "inside\n";
 					tempBestSolution = next.minimums->operator[](std::min_element(next.minimums->begin(), next.minimums->end()) - next.minimums->begin());
-					readyToCalc = true;
+					if (next.input.goalFunction(tempBestSolution[0], tempBestSolution[1]) < next.input.goalFunction(next.bestSolution->operator[](0), next.bestSolution->operator[](1)))
+					{
+						*next.bestSolution = tempBestSolution;
+					}
+					next.tCommon->readyToCalc = true;
 					break;
 				}
 			}
-			if (readyToCalc == true)
+			if (next.tCommon->readyToCalc == true)
 				break;
 			next.mymut->unlock();
 		}
 		next.mymut->unlock();
-		next.isJobDone[next.number] = false;
-		if (next.input.goalFunction(tempBestSolution[0], tempBestSolution[1])<next.input.goalFunction(next.bestSolution->operator[](0), next.bestSolution->operator[](1)) )
-		{
-			*next.bestSolution = tempBestSolution;
-		}
-
+		
+		
 		for (int j = next.range[0]; j < next.range[1]; j++)
 		{
 			next.positions[j].globalPosition = *next.bestSolution;
 		}
 
 		next.mymut->lock();
-		if (std::this_thread::get_id() == sorterID)
+		if (std::this_thread::get_id() == next.tCommon->sorterID)
 		{
-			sorterID = mainThread;
-			readyToCalc = false;
+			next.tCommon->sorterID = next.tCommon->mainThread;
+			next.tCommon->readyToCalc = false;
 		}
 		next.mymut->unlock();
 	}
@@ -285,7 +292,7 @@ void CalculateNextMove(NextMove next)
 
 NextMove::NextMove(Parameters* params, Positions* pos, SwarmInputData inp, std::array<double, 2>* sol,
 	std::vector<std::array<double, 2>>* mins, std::vector<double>* rsol,std::array<int,2> r,
-	std::mutex* m, bool* tabOfJobs,int number)
+	std::mutex* m, int* tabOfJobs,int number,ThreadCommon* tcom)
 {
 	positions = pos;
 	this->params = params;
@@ -297,5 +304,6 @@ NextMove::NextMove(Parameters* params, Positions* pos, SwarmInputData inp, std::
 	mymut = m;
 	this->isJobDone = tabOfJobs;
 	this->number = number;
+	tCommon = tcom;
 }
 
