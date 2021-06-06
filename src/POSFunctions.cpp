@@ -1,5 +1,4 @@
 #include "POSFunctions.h"
-#include <iostream>
 
 Positions::Positions(std::array<double, 2> x, std::array<double, 2> y, std::function<double(double, double)> fun, std::array<double,2> start)
 {
@@ -19,7 +18,9 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 	std::vector<double> real_solutions(input.noParticles);
 	Parameters* params = new Parameters[input.noParticles];
 	std::vector<std::thread> particles(input.noParticles);
-	//here
+	std::mutex* mutexes = new std::mutex;
+	bool* jobDone = new bool[input.noParticles]{ false };
+	mainThread = std::this_thread::get_id();
 	for (int i = 0; i < input.noParticles; i++)
 	{
 		positions[i]= Positions{ input.X,input.Y,input.goalFunction,{GenerateStartingPosition(input.X),GenerateStartingPosition(input.Y)} };
@@ -36,10 +37,12 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 	{
 		positions[i].globalPosition = bestSolution;
 	}
-
+	
 	for (int j = 0; j < threadRanges.size(); j++)
 	{
-		particles[j] = std::thread(CalculateNextMove, threadRanges[j], positions, params, input.iterations,bestSolution, real_solutions ,minimums,input.goalFunction);
+		NextMove next(params, positions, input, &bestSolution, &minimums, &real_solutions
+			, threadRanges[j], mutexes,jobDone,j);
+		particles[j] = std::thread(CalculateNextMove, next );
 	}
 	for (int j = 0; j < threadRanges.size(); j++)
 	{
@@ -211,38 +214,88 @@ void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameter
 	}
 }
 */
-void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameters* params,
-	int noIterations, std::array<double, 2>& bestSolution, std::vector<double>& real_solutions,
-	std::vector<std::array<double, 2>>& minimums, std::function<double(double,double)> fun)
+void CalculateNextMove(NextMove next)
 {
-	int c = 0;
-	//std::barrier sync_point(4, [&]() {std::cout << c << std::endl; });
-	for (int i = 0; i < noIterations; i++) 
+	int noIterations = next.input.iterations;
+	for (int i = 0; i < noIterations; i++)
 	{
-		c = i;
-		for (int j = range[0]; j < range[1]; j++)
+		for (int j = next.range[0]; j < next.range[1]; j++)
 		{
-			params[j] = CalculateParameters(j, noIterations);
-			CalculateBestLocalPosition(&positions[j], params[j]);
+			next.params[j] = CalculateParameters(j, noIterations);
+			CalculateBestLocalPosition(&next.positions[j], next.params[j]);
 		}
 
-		for (int j = range[0]; j < range[1]; j++)
+		for (int j = next.range[0]; j < next.range[1]; j++)
 		{
-			minimums[j] = positions[j].bestLocalPosition;
-			real_solutions[j] = fun(minimums[j][0], minimums[j][1]);
+			next.minimums->operator[](j) = next.positions[j].bestLocalPosition;
+			double x = (next.minimums->operator[](j))[0];
+			double y = (next.minimums->operator[](j))[0];
+			next.real_solutions->at(j) = next.input.goalFunction(x, y);
 		}
-		//sturktura booli gdzie czekam az kazdy watek oznaczy robote jako wykonana
-		//sync_point.arrive_and_wait();
-		/*auto tempBestSolution = minimums[std::min_element(minimums.begin(), minimums.end()) - minimums.begin()];
-		if (fun(tempBestSolution[0], tempBestSolution[1]) < fun(bestSolution[0], bestSolution[1]))
+		next.isJobDone[next.number] = true;
+		next.mymut->lock();
+		if (sorterID == mainThread) {
+			sorterID = std::this_thread::get_id();
+		}
+		next.isJobDone[next.number] = true;
+		next.mymut->unlock();
+		std::array<double, 2> tempBestSolution;
+		while (true)
 		{
-			bestSolution = tempBestSolution;
+			next.mymut->lock();
+			if (std::this_thread::get_id() == sorterID)
+			{
+				bool doAllThreadsEned = true;
+				for (int j = 0; j < next.input.threads; j++)
+				{
+					if (next.isJobDone[j] == false)
+						doAllThreadsEned = false;
+				}
+				if (doAllThreadsEned == true) {
+					tempBestSolution = next.minimums->operator[](std::min_element(next.minimums->begin(), next.minimums->end()) - next.minimums->begin());
+					readyToCalc = true;
+					break;
+				}
+			}
+			if (readyToCalc == true)
+				break;
+			next.mymut->unlock();
+		}
+		next.mymut->unlock();
+		next.isJobDone[next.number] = false;
+		if (next.input.goalFunction(tempBestSolution[0], tempBestSolution[1])<next.input.goalFunction(next.bestSolution->operator[](0), next.bestSolution->operator[](1)) )
+		{
+			*next.bestSolution = tempBestSolution;
 		}
 
-		for (int j = range[0]; j < range[1]; j++)
+		for (int j = next.range[0]; j < next.range[1]; j++)
 		{
-			positions[j].globalPosition = bestSolution;
-		}*/
+			next.positions[j].globalPosition = *next.bestSolution;
+		}
+
+		next.mymut->lock();
+		if (std::this_thread::get_id() == sorterID)
+		{
+			sorterID = mainThread;
+			readyToCalc = false;
+		}
+		next.mymut->unlock();
 	}
+}
+
+NextMove::NextMove(Parameters* params, Positions* pos, SwarmInputData inp, std::array<double, 2>* sol,
+	std::vector<std::array<double, 2>>* mins, std::vector<double>* rsol,std::array<int,2> r,
+	std::mutex* m, bool* tabOfJobs,int number)
+{
+	positions = pos;
+	this->params = params;
+	input = inp;
+	bestSolution = sol;
+	minimums = mins;
+	real_solutions = rsol;
+	range = r;
+	mymut = m;
+	this->isJobDone = tabOfJobs;
+	this->number = number;
 }
 
