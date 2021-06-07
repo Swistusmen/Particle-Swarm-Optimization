@@ -7,6 +7,7 @@
 #include <utility>
 #include <mutex>
 #include <iostream>
+#include <barrier>
 
 struct Parameters {
 	double c1=0.0, c2=0.0, w=0.0;
@@ -32,21 +33,15 @@ struct Positions {
 };
 
 struct NextMove {
-	Positions* positions;
-	Parameters* params;
-	SwarmInputData input;
-	std::array<double, 2>* bestSolution;
-	std::vector<std::array<double, 2>>* minimums;
-	std::vector<double>* real_solutions;
 	std::array<int, 2> range;
-	std::mutex* mymut;
-	int* isJobDone;
-	int number;
-	ThreadCommon* tCommon;
-
-	NextMove(Parameters* params, Positions* pos, SwarmInputData inp, std::array<double, 2>* sol,
-		std::vector<std::array<double, 2>>* mins, std::vector<double>* rsol, std::array<int, 2> r,
-		std::mutex* m,int* tabOfJobs,int number,ThreadCommon* tcom);
+	int noIterations;
+	int currentIteration;
+	Parameters* params;
+	Positions* positions;
+	std::function<double(double, double)> fun;
+	NextMove(std::array<int, 2>range, int noIt, int currIt, Parameters* par, Positions* pos,
+		std::function<double(double, double)> goalFun);
+	
 };
 
 int RandomInThousand(); //for r and starting velocity
@@ -61,6 +56,4 @@ std::vector<std::array<int, 2>> CalculateThreadBounds(SwarmInputData* input);
 
 SwarmOutputata FindMinimum(SwarmInputData input);
 
-//void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameters* params, int iteration,int noIterations);
-
-void CalculateNextMove(NextMove next);
+void FindLocalMinimum(NextMove calcData, std::vector<std::array<double, 2>>& sol, std::vector<double>& rsol);
