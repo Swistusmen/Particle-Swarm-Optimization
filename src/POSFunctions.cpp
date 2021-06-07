@@ -39,46 +39,35 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 	{
 		positions[i].globalPosition = bestSolution;
 	}
+	std::barrier bar(input.threads);
+	int common = 0;
+	std::mutex mut;
+	std::vector<NextMove> calcData;
 	
 	for (int j = 0; j < threadRanges.size(); j++)
 	{
-		NextMove next(params, positions, input, &bestSolution, &minimums, &real_solutions
-			, threadRanges[j], mutexes,jobDone,j,&tCommon);
-		particles[j] = std::thread(CalculateNextMove, next );
+		calcData.emplace_back(threadRanges[j], input.iterations, j, params,
+			positions, input.goalFunction);
+		particles[j] = std::thread([&, j] {
+			for (int c = 0; c < input.iterations; c++)
+			{
+				calcData[j].currentIteration = c;
+				FindLocalMinimum(calcData[j], minimums, real_solutions);
+				bar.arrive_and_wait();
+				if (j == 0) {
+					mut.lock();
+					bestSolution = minimums[std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin()];
+					mut.unlock();
+				}
+				bar.arrive_and_wait();
+				for (int d = threadRanges[j][0]; d < threadRanges[j][1]; d++, positions[d].globalPosition = bestSolution);
+			}
+			});
 	}
 	for (int j = 0; j < threadRanges.size(); j++)
 	{
 		particles[j].join();
 	}
-	/*
-	for (int i = 0; i < input.iterations; i++)
-	{
-		for (int j = 0; j < threadRanges.size(); j++)
-		{
-			particles[j] = std::thread(CalculateNextMove, threadRanges[j], positions, params,j, input.iterations);
-		}
-		for (int j = 0; j < threadRanges.size(); j++)
-		{
-			particles[j].join();
-		}
-		
-		for (int j = 0; j < input.noParticles; j++)
-		{
-			minimums[j] = positions[j].bestLocalPosition;
-			real_solutions[j] = input.goalFunction(minimums[j][0], minimums[j][1]);
-		}
-		
-		auto tempBestSolution = minimums[std::min_element(minimums.begin(), minimums.end()) - minimums.begin()];
-		if (input.goalFunction(tempBestSolution[0], tempBestSolution[1]) < input.goalFunction(bestSolution[0], bestSolution[1]))
-		{
-			bestSolution = tempBestSolution;
-			for (int j = 0; j < input.noParticles; j++)
-			{
-				positions[j].globalPosition=bestSolution;
-			}
-		}
-	
-	}*/
 	SwarmOutputata output;
 	output.x = bestSolution[0];
 	output.y = bestSolution[1];
@@ -206,104 +195,34 @@ std::vector<std::array<int, 2>> CalculateThreadBounds(SwarmInputData* input)
 	}
 	return output;
 }
-/*
-void CalculateNextMove(std::array<int, 2> range, Positions* positions, Parameters* params, int iteration, int noIterations)
+
+void FindLocalMinimum(NextMove data,std::vector<std::array<double,2>>& minimums,
+	std::vector<double>& real_solutions)
 {
-	for (int i = range[0]; i < range[1]; i++)
-	{
-		params[i] = CalculateParameters(iteration, noIterations);
-		CalculateBestLocalPosition(&positions[i], params[i]);
-	}
-}
-*/
-void CalculateNextMove(NextMove next)
-{
-	std::cout << std::this_thread::get_id() << std::endl;
-	int noIterations = next.input.iterations;
-	for (int i = 0; i < noIterations; i++)
-	{
-		for (int j = next.range[0]; j < next.range[1]; j++)
+		for (int j = data.range[0]; j < data.range[1]; j++)
 		{
-			next.params[j] = CalculateParameters(j, noIterations);
-			CalculateBestLocalPosition(&next.positions[j], next.params[j]);
+			data.params[j] = CalculateParameters(j, data.noIterations);
+			CalculateBestLocalPosition(data.positions, data.params[j]);
 		}
 
-		for (int j = next.range[0]; j < next.range[1]; j++)
+		for (int j = data.range[0]; j < data.range[1]; j++)
 		{
-			next.minimums->operator[](j) = next.positions[j].bestLocalPosition;
-			double x = (next.minimums->operator[](j))[0];
-			double y = (next.minimums->operator[](j))[0];
-			next.real_solutions->at(j) = next.input.goalFunction(x, y);
+			minimums[j] = data.positions[j].bestLocalPosition;
+			double x = minimums[j][0];
+			double y = minimums[j][1];
+			real_solutions[j] = data.fun(x, y);
 		}
-		next.isJobDone[next.number] = -1;
-		next.mymut->lock();
-		if (next.tCommon->sorterID == next.tCommon->mainThread) {
-			next.tCommon->sorterID = std::this_thread::get_id();
-		}
-		next.isJobDone[next.number] = i;
-		next.mymut->unlock();
-		std::array<double, 2> tempBestSolution;
-		while (true)
-		{
-			next.mymut->lock();
-			std::cout << std::this_thread::get_id()<<" "<<i << std::endl;
-			if (std::this_thread::get_id() == next.tCommon->sorterID)
-			{
-				bool doAllThreadsEned = true;
-				for (int j = 0; j < next.input.threads; j++)
-				{
-					std::cout << next.isJobDone[j] << " ";
-					if (next.isJobDone[j] != i)
-						doAllThreadsEned = false;
-				}
-				std::cout << std::endl;
-				if (doAllThreadsEned == true) {
-					std::cout << "inside\n";
-					tempBestSolution = next.minimums->operator[](std::min_element(next.minimums->begin(), next.minimums->end()) - next.minimums->begin());
-					if (next.input.goalFunction(tempBestSolution[0], tempBestSolution[1]) < next.input.goalFunction(next.bestSolution->operator[](0), next.bestSolution->operator[](1)))
-					{
-						*next.bestSolution = tempBestSolution;
-					}
-					next.tCommon->readyToCalc = true;
-					break;
-				}
-			}
-			if (next.tCommon->readyToCalc == true)
-				break;
-			next.mymut->unlock();
-		}
-		next.mymut->unlock();
-		
-		
-		for (int j = next.range[0]; j < next.range[1]; j++)
-		{
-			next.positions[j].globalPosition = *next.bestSolution;
-		}
-
-		next.mymut->lock();
-		if (std::this_thread::get_id() == next.tCommon->sorterID)
-		{
-			next.tCommon->sorterID = next.tCommon->mainThread;
-			next.tCommon->readyToCalc = false;
-		}
-		next.mymut->unlock();
-	}
 }
 
-NextMove::NextMove(Parameters* params, Positions* pos, SwarmInputData inp, std::array<double, 2>* sol,
-	std::vector<std::array<double, 2>>* mins, std::vector<double>* rsol,std::array<int,2> r,
-	std::mutex* m, int* tabOfJobs,int number,ThreadCommon* tcom)
+NextMove::NextMove(std::array<int, 2>range, int noIt, int currIt, Parameters* par, Positions* pos,
+	std::function<double(double, double)> goalFun)
 {
-	positions = pos;
-	this->params = params;
-	input = inp;
-	bestSolution = sol;
-	minimums = mins;
-	real_solutions = rsol;
-	range = r;
-	mymut = m;
-	this->isJobDone = tabOfJobs;
-	this->number = number;
-	tCommon = tcom;
+	this->range=range;
+	noIterations=noIt;
+	currentIteration=currIt;
+	params=par;
+	positions=pos;
+	fun=goalFun;
 }
+
 
