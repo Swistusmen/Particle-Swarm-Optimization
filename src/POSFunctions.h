@@ -1,13 +1,8 @@
 #pragma once
 #include "Utilities.h"
-#include <random>
 #include <thread>
 #include <barrier>
-#include <memory>
-#include <utility>
 #include <mutex>
-#include <iostream>
-#include <barrier>
 
 struct Parameters {
 	double c1=0.0, c2=0.0, w=0.0;

@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <functional>
+#include <random>
 
 #define EPSILON 0.001
 #define EPSILON_EXP 1000
