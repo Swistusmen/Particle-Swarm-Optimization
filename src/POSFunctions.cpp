@@ -56,7 +56,9 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 				bar.arrive_and_wait();
 				if (j == 0) {
 					mut.lock();
-					bestSolution = minimums[std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin()];
+					int index=std::min_element(real_solutions.begin(), real_solutions.end()) - real_solutions.begin();
+					if(real_solutions[index]<input.goalFunction(bestSolution[0],bestSolution[1]))
+						bestSolution=minimums[index];
 					mut.unlock();
 				}
 				bar.arrive_and_wait();
@@ -122,10 +124,12 @@ std::array<double,2> FindBestDirection(Positions* position)
 	std::vector<std::array<double, 2>> directions(4);
 	std::fill(solutions.begin(), solutions.end(), std::numeric_limits<double>::max());
 	double velocity = position->velocity;
-	double newPositiveX = position->bestLocalPosition[0] + velocity;
-	double newNegativeX = position->bestLocalPosition[0] - velocity;
-	double newPositiveY = position->bestLocalPosition[1] + velocity;
-	double newNegativeY = position->bestLocalPosition[1] - velocity;
+	
+	double newPositiveX = position->currentPosition[0] + velocity;
+	double newNegativeX = position->currentPosition[0] - velocity;
+	double newPositiveY = position->currentPosition[1] + velocity;
+	double newNegativeY = position->currentPosition[1] - velocity;
+
 	double Xmax = position->X[0];
 	double Xmin = position->X[1];
 	double Ymax = position->Y[0];
@@ -158,7 +162,7 @@ std::array<double,2> FindBestDirection(Positions* position)
 void CalculateBestLocalPosition(Positions* positions,Parameters parameters)
 {
 	std::array<double, 2> currentPosition = positions->currentPosition;
-	double localDistance = std::sqrt(std::pow(positions->bestLocalPosition[0] - currentPosition[0], 2) + std::pow(positions->bestLocalPosition[0] - currentPosition[0], 2));
+	double localDistance = std::sqrt(std::pow(positions->bestLocalPosition[0] - currentPosition[0], 2) + std::pow(positions->bestLocalPosition[1] - currentPosition[1], 2));
 	double globalDistance = std::sqrt(std::pow(positions->globalPosition[0] - currentPosition[0], 2) + std::pow(positions->globalPosition[1] - currentPosition[1], 2));
 	positions->velocity = positions->velocity * parameters.w + RandomInThousand()/1000.0 * parameters.c1 * localDistance + RandomInThousand() / 1000.0 * parameters.c2 * globalDistance;
 	currentPosition = FindBestDirection(positions);
