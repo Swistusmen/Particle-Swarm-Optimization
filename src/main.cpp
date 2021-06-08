@@ -1,8 +1,8 @@
 #include "OptimizationFunctions.h"
+#include "SavePoints.h"
 #include "POSFunctions.h"
 #include <iostream>
-
-double a(double x, double y) { return x * y; }
+#include <chrono>
 
 int main(){
     std::array<double, 2> x;
@@ -19,12 +19,21 @@ int main(){
     input.iterations = 1000;
     input.goalFunction = Himmelblau;
     input.threads = 4;
-
+    auto start = std::chrono::system_clock::now();
     auto output = SwarmOneThread(input);
+    auto end = std::chrono::system_clock::now();
+    std::cout << (end - start).count() << std::endl;
+    std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
+    SavePoints(output.minimums, Himmelblau, "data1.txt");
     
-    std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
-
+    start = std::chrono::system_clock::now();
     output = FindMinimum(input);
+    end = std::chrono::system_clock::now();
+    std::cout << (end - start).count() << std::endl;
     std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
+    std::cout << output.minimums.size() << std::endl;
+    
+    SavePoints(output.minimums, Himmelblau, "data2.txt");
+
     return 0;
 }

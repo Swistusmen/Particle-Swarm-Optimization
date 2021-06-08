@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <functional>
+#include <random>
 
 #define EPSILON 0.001
 #define EPSILON_EXP 1000
@@ -18,4 +19,5 @@ struct SwarmInputData {
 
 struct SwarmOutputata {
 	double x, y, z;
+	std::vector<std::array<double, 2>> minimums;
 };
