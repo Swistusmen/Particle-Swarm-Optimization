@@ -27,7 +27,7 @@ SwarmOutputata SwarmOneThread(SwarmInputData input)
 		for (int j = 0; j < noParticles; j++)
 		{
 			particles[j]->CalculateNextPosition();
-			solutions[j] = particles[j]->GetBestPosition();
+			solutions[j] = particles[j]->GetBestLocalPosition();
 			real_solutions[j] = input.goalFunction(solutions[j].first, solutions[j].second);
 		}
 		auto tempBestSolution = solutions[std::min_element(solutions.begin(), solutions.end()) - solutions.begin()];
@@ -41,7 +41,10 @@ SwarmOutputata SwarmOneThread(SwarmInputData input)
 		}
 	}
 	SwarmOutputata output;
-	
+	for (int i = 0; i < input.noParticles; i++)
+	{
+		output.minimums.push_back({ solutions[i].first,solutions[i].second });
+	}
 	output.x = bestSolution.first;
 	output.y = bestSolution.second;
 	output.z = input.goalFunction(output.x, output.y);

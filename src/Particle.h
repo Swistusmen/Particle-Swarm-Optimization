@@ -10,6 +10,7 @@ public:
 	
 	void CalculateNextPosition();
 	std::pair< double,  double> GetBestPosition() {return bestPosition;};
+	std::pair<double, double> GetBestLocalPosition() { return bestLocalPosition; };
 	void SetBestGlobalPosition(std::pair<double, double> solution);
 
 private:

@@ -69,6 +69,10 @@ SwarmOutputata FindMinimum(SwarmInputData input)
 		particles[j].join();
 	}
 	SwarmOutputata output;
+	for (int i = 0; i < input.noParticles; i++)
+	{
+		output.minimums.push_back(minimums[i]);
+	}
 	output.x = bestSolution[0];
 	output.y = bestSolution[1];
 	output.z = input.goalFunction(output.x, output.y);

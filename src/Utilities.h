@@ -19,4 +19,5 @@ struct SwarmInputData {
 
 struct SwarmOutputata {
 	double x, y, z;
+	std::vector<std::array<double, 2>> minimums;
 };
