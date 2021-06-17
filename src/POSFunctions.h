@@ -9,12 +9,6 @@ struct Parameters {
 	Parameters() = default;
 };
 
-struct ThreadCommon {
-	std::thread::id sorterID;
-	std::thread::id mainThread;
-	bool readyToCalc = false;
-};
-
 struct Positions {
 	Positions() = default;
 	Positions(std::array<double, 2> x, std::array<double, 2> y, std::function<double(double, double)> fun, std::array<double, 2> start);
@@ -50,5 +44,9 @@ std::array<double, 2> FindBestDirection(Positions* positions);
 std::vector<std::array<int, 2>> CalculateThreadBounds(SwarmInputData* input);
 
 SwarmOutputata FindMinimum(SwarmInputData input);
+
+SwarmOutputata FindMinimumAsync(SwarmInputData input);
+
+
 
 void FindLocalMinimum(NextMove calcData, std::vector<std::array<double, 2>>& sol, std::vector<double>& rsol);

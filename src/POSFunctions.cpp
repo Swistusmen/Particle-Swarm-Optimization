@@ -10,24 +10,47 @@ Positions::Positions(std::array<double, 2> x, std::array<double, 2> y, std::func
 	currentPosition = start;
 }
 
+SwarmOutputata FindMinimumAsync(SwarmInputData input)
+{
+	std::vector<Positions> positions(input.noParticles);
+	std::generate(positions.begin(), positions.end(), [&]() {
+		return Positions{ input.X,input.Y,input.goalFunction,
+		{GenerateStartingPosition(input.X),GenerateStartingPosition(input.Y)} }; }
+	);
+	std::vector<std::array<double, 2>> minimums(input.noParticles);
+	std::vector<double> solutions(input.noParticles);
+	const std::function<double(double, double)> fun = input.goalFunction;
+	std::transform(positions.begin(), positions.end(), minimums.begin(), [](Positions pos) {return pos.globalPosition; });
+	std::transform(solutions.begin(), solutions.end(), minimums.begin(), [fun](std::array<double, 2> val) {
+		return fun(val[0], val[1]); });
+	auto bestSolution = minimums[std::min_element(solutions.begin(), solutions.end()) - solutions.begin()];
+	std::for_each(positions.begin(), positions.end(), [bestSolution](Positions& pos) {
+		return pos.globalPosition = bestSolution;
+		});
+	const int max = input.iterations;
+	for (int i = 0; i < max; i++)
+	{
+		//funkcja ktora zwraca wektor pozycji
+	}
+	SwarmOutputata out;
+	return out;
+}
+
 SwarmOutputata FindMinimum(SwarmInputData input)
 {
 	auto threadRanges = CalculateThreadBounds(&input);
 	Positions* positions= new Positions[input.noParticles];
+
 	std::vector<std::array<double, 2>> minimums(input.noParticles);
 	std::vector<double> real_solutions(input.noParticles);
 	Parameters* params = new Parameters[input.noParticles];
 	std::vector<std::thread> particles(input.noParticles);
-	std::mutex* mutexes = new std::mutex;
-	int* jobDone = new int[input.noParticles]{ -1 };
-	ThreadCommon tCommon;
-	tCommon.mainThread = std::this_thread::get_id();
-	tCommon.sorterID = std::this_thread::get_id();
+	
 	for (int i = 0; i < input.noParticles; i++)
 	{
 		positions[i]= Positions{ input.X,input.Y,input.goalFunction,{GenerateStartingPosition(input.X),GenerateStartingPosition(input.Y)} };
 	}
-
+	
 	for (int i = 0; i < input.noParticles; i++)
 	{
 		minimums[i] = positions[i].globalPosition;
