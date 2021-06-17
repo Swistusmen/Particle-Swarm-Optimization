@@ -1,5 +1,6 @@
 #pragma once
 #include "Utilities.h"
+#include <future>
 #include <thread>
 #include <barrier>
 #include <mutex>
@@ -47,6 +48,7 @@ SwarmOutputata FindMinimum(SwarmInputData input);
 
 SwarmOutputata FindMinimumAsync(SwarmInputData input);
 
-
+void CalculateBestLocalPositionsA(
+	Positions&, Parameters);
 
 void FindLocalMinimum(NextMove calcData, std::vector<std::array<double, 2>>& sol, std::vector<double>& rsol);

@@ -21,18 +21,35 @@ SwarmOutputata FindMinimumAsync(SwarmInputData input)
 	std::vector<double> solutions(input.noParticles);
 	const std::function<double(double, double)> fun = input.goalFunction;
 	std::transform(positions.begin(), positions.end(), minimums.begin(), [](Positions pos) {return pos.globalPosition; });
-	std::transform(solutions.begin(), solutions.end(), minimums.begin(), [fun](std::array<double, 2> val) {
+	std::transform(minimums.begin(), minimums.end(), solutions.begin(), [fun](std::array<double, 2> val) {
 		return fun(val[0], val[1]); });
 	auto bestSolution = minimums[std::min_element(solutions.begin(), solutions.end()) - solutions.begin()];
 	std::for_each(positions.begin(), positions.end(), [bestSolution](Positions& pos) {
 		return pos.globalPosition = bestSolution;
 		});
+
+	auto threadRanges = CalculateThreadBounds(&input);
+	std::vector<std::future<std::vector<Positions>>> pos;
 	const int max = input.iterations;
 	for (int i = 0; i < max; i++)
 	{
-		//funkcja ktora zwraca wektor pozycji
+		auto params = CalculateParameters(i, max);
+		std::for_each(positions.begin(), positions.end(), [params](Positions& pos) {
+			return CalculateBestLocalPositionsA(pos, params);
+			});
+
+		std::transform(positions.begin(), positions.end(), minimums.begin(), [](Positions pos) {return pos.globalPosition; });
+		std::transform(minimums.begin(), minimums.end(), solutions.begin(), [fun](std::array<double, 2> val) {
+			return fun(val[0], val[1]); });
+		auto bestSolution = minimums[std::min_element(solutions.begin(), solutions.end()) - solutions.begin()];
+		std::for_each(positions.begin(), positions.end(), [bestSolution](Positions& pos) {
+			return pos.globalPosition = bestSolution;
+			});
 	}
 	SwarmOutputata out;
+	out.x = bestSolution[0];
+	out.y = bestSolution[1];
+	out.z = fun(out.x, out.y);
 	return out;
 }
 
@@ -194,6 +211,20 @@ void CalculateBestLocalPosition(Positions* positions,Parameters parameters)
 	double newPositionGoalFunctionValue = positions->goalFunction(currentPosition[0], currentPosition[1]);
 	if (newPositionGoalFunctionValue < oldPositionGoalFunctionValue)
 		positions->bestLocalPosition = currentPosition;
+}
+
+void CalculateBestLocalPositionsA(
+	Positions& pos, Parameters params)
+{
+	std::array<double, 2> currentPosition = pos.currentPosition;
+	double localDistance = std::sqrt(std::pow(pos.bestLocalPosition[0] - currentPosition[0], 2) + std::pow(pos.bestLocalPosition[1] - currentPosition[1], 2));
+	double globalDistance = std::sqrt(std::pow(pos.globalPosition[0] - currentPosition[0], 2) + std::pow(pos.globalPosition[1] - currentPosition[1], 2));
+	pos.velocity = pos.velocity * params.w + RandomInThousand() / 1000.0 * params.c1 * localDistance + RandomInThousand() / 1000.0 * params.c2 * globalDistance;
+	pos.currentPosition = FindBestDirection(&pos); //WARNING
+	double oldPositionGoalFunctionValue = pos.goalFunction(pos.bestLocalPosition[0], pos.bestLocalPosition[1]);
+	double newPositionGoalFunctionValue = pos.goalFunction(pos.currentPosition[0], pos.currentPosition[1]);
+	if (newPositionGoalFunctionValue < oldPositionGoalFunctionValue)
+		pos.bestLocalPosition = currentPosition;
 }
 
 std::vector<std::array<int, 2>> CalculateThreadBounds(SwarmInputData* input)
