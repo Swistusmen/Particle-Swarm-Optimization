@@ -13,18 +13,18 @@ Positions::Positions(std::array<double, 2> x, std::array<double, 2> y, std::func
 SwarmOutputata FindMinimumAsync(SwarmInputData input)
 {
 	std::vector<Positions> positions(input.noParticles);
-	std::generate(positions.begin(), positions.end(), [&]() {
+	std::generate(std::execution::par_unseq,positions.begin(), positions.end(), [&]() {
 		return Positions{ input.X,input.Y,input.goalFunction,
 		{GenerateStartingPosition(input.X),GenerateStartingPosition(input.Y)} }; }
 	);
 	std::vector<std::array<double, 2>> minimums(input.noParticles);
 	std::vector<double> solutions(input.noParticles);
 	const std::function<double(double, double)> fun = input.goalFunction;
-	std::transform(positions.begin(), positions.end(), minimums.begin(), [](Positions pos) {return pos.globalPosition; });
-	std::transform(minimums.begin(), minimums.end(), solutions.begin(), [fun](std::array<double, 2> val) {
+	std::transform(std::execution::par_unseq,positions.begin(), positions.end(), minimums.begin(), [](Positions pos) {return pos.globalPosition; });
+	std::transform(std::execution::par_unseq,minimums.begin(), minimums.end(), solutions.begin(), [fun](std::array<double, 2> val) {
 		return fun(val[0], val[1]); });
 	auto bestSolution = minimums[std::min_element(solutions.begin(), solutions.end()) - solutions.begin()];
-	std::for_each(positions.begin(), positions.end(), [bestSolution](Positions& pos) {
+	std::for_each(std::execution::par_unseq,positions.begin(), positions.end(), [bestSolution](Positions& pos) {
 		return pos.globalPosition = bestSolution;
 		});
 
@@ -34,15 +34,15 @@ SwarmOutputata FindMinimumAsync(SwarmInputData input)
 	for (int i = 0; i < max; i++)
 	{
 		auto params = CalculateParameters(i, max);
-		std::for_each(positions.begin(), positions.end(), [params](Positions& pos) {
+		std::for_each(std::execution::par_unseq,positions.begin(), positions.end(), [params](Positions& pos) {
 			return CalculateBestLocalPositionsA(pos, params);
 			});
 
-		std::transform(positions.begin(), positions.end(), minimums.begin(), [](Positions pos) {return pos.globalPosition; });
-		std::transform(minimums.begin(), minimums.end(), solutions.begin(), [fun](std::array<double, 2> val) {
+		std::transform(std::execution::par_unseq,positions.begin(), positions.end(), minimums.begin(), [](Positions pos) {return pos.globalPosition; });
+		std::transform(std::execution::par_unseq,minimums.begin(), minimums.end(), solutions.begin(), [fun](std::array<double, 2> val) {
 			return fun(val[0], val[1]); });
 		auto bestSolution = minimums[std::min_element(solutions.begin(), solutions.end()) - solutions.begin()];
-		std::for_each(positions.begin(), positions.end(), [bestSolution](Positions& pos) {
+		std::for_each(std::execution::par_unseq,positions.begin(), positions.end(), [bestSolution](Positions& pos) {
 			return pos.globalPosition = bestSolution;
 			});
 	}

@@ -45,5 +45,11 @@ int main(){
     
     SavePoints(output.minimums, input.goalFunction, "data2.txt");
 
+    start = std::chrono::system_clock::now();
+    output = FindMinimumAsync(input);
+    end = std::chrono::system_clock::now();
+    std::cout << (end - start).count() << std::endl;
+    std::cout << "x: " << output.x << " y: " << output.y << " z: " << output.z << std::endl;
+
     return 0;
 }

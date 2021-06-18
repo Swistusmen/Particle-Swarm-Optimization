@@ -4,6 +4,7 @@
 #include <thread>
 #include <barrier>
 #include <mutex>
+#include <execution>
 
 struct Parameters {
 	double c1=0.0, c2=0.0, w=0.0;
